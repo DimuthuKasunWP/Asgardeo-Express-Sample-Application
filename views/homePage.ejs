@@ -1,0 +1,207 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="referrer" content="no-referrer" />
+
+    <title>Asgardeo-ExpressJS Sample Application</title>
+
+    <link href="css/home.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <div id="root">
+        <div>
+            <div class="title">
+                <h1>Asgardeo-ExpressJS Sample Application</h1>
+            </div>
+            <div class="content">
+                <% if (error) { %>
+                    <div id="error">
+                        <div class="segment-form">
+                            <div class="ui visible negative message">
+                                <div class="header"><b>Authentication Error!</b></div>
+                                <p><% errorMessage %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                        <% if(!isConfigPresent) { %>
+                            <div id="missing-config">
+                                <h2>You need to update the Client ID to proceed.</h2>
+                                <p>
+                                    Please open the <b>config.json</b> file using an editor and update the
+                                    <code>clientID</code> and
+                                    <code>clientSecret</code> value with the registered application's
+                                    clientID & clientSecret.
+                                </p>
+                            </div>
+                            <% } else if (isAuthenticated && idToken) { %>
+                                <div id="loading">Loading ...</div>
+                                <div id="logged-in-view" style="display:none;">
+                                    <h2 id="authentication-response-title">Authentication Response</h2>
+                                    <div>
+                                        <div id="authentication-response" class="json-container"></div>
+                                    </div>
+
+                                    <h2 id="id-token-title">ID token</h2>
+
+                                    <div class="container row" style="background: linear-gradient(to right, rgb(99, 114, 255) 0%, rgb(92, 169, 251) 100%);">
+                                        <div class="column">
+                                            <h5 style="text-align: center; color: white;font-family: system-ui;"><b>Encoded</b></h5>
+                                            <div class="code">
+                                                <code>
+                                            <span class="id-token-0" id="id-token-0"></span>.
+                                            <span class="id-token-1" id="id-token-1"></span>.
+                                            <span class="id-token-2" id="id-token-2"></span>
+                                        </code>
+                                            </div>
+                                        </div>
+                                        <div class="column">
+                                            <div>
+                                                <h5 style="text-align: center; color: white;font-family: system-ui;"><b>Decoded:</b> Header</h5>
+                                                <div id="id-token-header" class="json-container"></div>
+                                            </div>
+
+                                            <div>
+                                                <h5 style="text-align: center; color: white;font-family: system-ui;"><b>Decoded:</b> Payload</h5>
+                                                <div id="id-token-payload" class="json-container"></div>
+                                            </div>
+
+                                            <div>
+                                                <h5 style="text-align: center;color: white;font-family: system-ui;">Signature</h5>
+                                                <div class="code" style="margin-bottom:40px;">
+                                                    <code>
+                                                HMACSHA256(
+                                                <br />
+                                                &nbsp;&nbsp;<span class="id-token-0"
+                                                    >base64UrlEncode( <span class="id-token-1">header</span>)</span
+                                                >
+                                                + "." + <br />
+                                                &nbsp;&nbsp;<span class="id-token-0"
+                                                    >base64UrlEncode( <span class="id-token-1">payload</span>)</span
+                                                >,&nbsp; <span class="id-token-1">your-256-bit-secret</span> <br />
+                                                );
+                                            </code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form action="/logout">
+                                        <button class="btn-custom" type="submit">Logout</button>
+                                    </form>
+                                </div>
+                                <% } else { %>
+                                    <div id="logged-out-view">
+                                        <div class="home-image">
+                                            <img src="images/node-js.svg" class="js-logo-image logo" />
+                                        </div>
+                                        <h3>
+                                            Sample demo to showcase authentication for an Express application <br />
+                                            via the OpenID Connect Authorization Code flow, <br />
+                                            which is integrated using the
+                                            <a href="https://github.com/asgardeo/asgardeo-auth-node-sdk"
+                                                target="_blank">
+                                                Asgardeo Auth Express SDK</a>.
+                                        </h3>
+                                        <form action="/logout">
+                                            <button class="btn primary" type="submit">Login</button>
+                                        </form>
+                                    </div>
+                                    <% } %>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Add Asgardeo OIDC JS -->
+    <script src="https://unpkg.com/json-formatter-js@latest/dist/json-formatter.umd.js"></script>
+    <script>
+        function parseIdToken(idToken) {
+            if (!idToken) {
+                return;
+            }
+
+            if (typeof idToken !== "string") {
+                idToken = JSON.stringify(idToken);
+            }
+
+            const idTokenSplit = idToken.split(".");
+            let idTokenObject = {
+                encoded: [],
+                decoded: []
+            };
+
+            idTokenSplit.forEach(function (element) {
+                idTokenObject["encoded"].push(element);
+            });
+
+            idTokenObject["decoded"].push(JSON.parse(atob(idTokenObject.encoded[0])));
+            idTokenObject["decoded"].push(JSON.parse(atob(idTokenObject.encoded[1])));
+
+            var sub = idTokenObject["decoded"][1] && idTokenObject["decoded"][1]?.sub?.split("/");
+
+            if (sub.length >= 2) {
+                sub.shift();
+                idTokenObject["decoded"][1].sub = sub.join("/");
+            }
+
+            const groups = [];
+            idTokenObject["decoded"][1] &&
+                typeof idTokenObject["decoded"][1]?.groups === "string" &&
+                groups.push(idTokenObject["decoded"][1]?.groups);
+
+            idTokenObject["decoded"][1] &&
+                typeof idTokenObject["decoded"][1]?.groups !== "string" &&
+                idTokenObject["decoded"][1]?.groups?.forEach((group) => {
+                    const groupArrays = group.split("/");
+
+                    if (groupArrays.length >= 2) {
+                        groupArrays.shift();
+                        groups.push(groupArrays.join("/"));
+                    } else {
+                        groups.push(group);
+                    }
+                });
+
+            if (idTokenObject["decoded"][1]?.groups) {
+                idTokenObject["decoded"][1].groups = groups;
+            }
+
+            return idTokenObject;
+        }
+
+        var idToken = "<%=idToken%>";
+        var authenticationResponseViewBox = document.getElementById("authentication-response");
+        var idTokenHeaderViewBox = document.getElementById("id-token-header");
+        var idTokenPayloadViewBox = document.getElementById("id-token-payload");
+
+        if ("<%=isAuthenticated%>" === "true" && idToken) {
+            var parsedIDToken = parseIdToken(idToken);
+            var formattedAuthenticateResponse = new JSONFormatter(<%-JSON.stringify(authenticateResponse)%>, 1, {
+                theme: "dark"
+            });
+            var formattedDecodedIdTokenHeader = new JSONFormatter(parsedIDToken.decoded[0], 1, { theme: "dark" });
+            var formattedDecodedIdTokenPayload = new JSONFormatter(parsedIDToken.decoded[1], 1, { theme: "dark" });
+
+            authenticationResponseViewBox.innerHTML = "";
+            idTokenHeaderViewBox.innerHTML = "";
+            idTokenPayloadViewBox.innerHTML = "";
+
+            authenticationResponseViewBox.appendChild(formattedAuthenticateResponse.render());
+            idTokenHeaderViewBox.appendChild(formattedDecodedIdTokenHeader.render());
+            idTokenPayloadViewBox.appendChild(formattedDecodedIdTokenPayload.render());
+
+            document.getElementById("id-token-0").innerHTML = parsedIDToken.encoded[0];
+            document.getElementById("id-token-1").innerHTML = parsedIDToken.encoded[1];
+            document.getElementById("id-token-2").innerHTML = parsedIDToken.encoded[2];
+
+            document.getElementById("logged-in-view").style.display = "block";
+            document.getElementById("loading").style.display = "none";
+
+        }
+    </script>
+</body>
+
+</html>
