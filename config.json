@@ -1,6 +1,6 @@
 {
-  "clientID": "<client_id>",
-  "clientSecret": "<client_secret>",
+  "clientID": "",
+  "clientSecret": "",
   "baseUrl": "https://api.asgardeo.io/t/<org_name>",
   "appURL": "http://localhost:3000",
   "scope": ["openid", "profile"]
